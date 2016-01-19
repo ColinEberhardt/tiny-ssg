@@ -34,20 +34,6 @@ function mapFiles(filePattern, mapping) {
     });
 }
 
-// load any partials and helpers that are reuqired by handlebars
-function configureHandlebars() {
-    return Q.fcall(() => {
-        require('handlebars-helpers/lib/helpers/helpers-miscellaneous').register(handlebars);
-        require('handlebars-helpers/lib/helpers/helpers-comparisons').register(handlebars);
-        require('handlebars-group-by').register(handlebars);
-
-        require('./handlebars-helpers/dynamic-include').register(handlebars);
-        require('./handlebars-helpers/escape').register(handlebars);
-        require('./handlebars-helpers/codeblock').register(handlebars);
-        require('./handlebars-helpers/json').register(handlebars);
-    });
-}
-
 function loadHandlebarsPartials() {
     return mapFiles('_includes/*.hbs', file => {
         const templateName = path.basename(file, '.hbs');
@@ -149,8 +135,7 @@ function collectPagesFrontMatter(filePattern) {
 }
 
 function build(filePattern, destinationPath, globalData) {
-    return configureHandlebars()
-        .then(() => loadHandlebarsPartials())
+    return loadHandlebarsPartials()
         .then(() => collectPagesFrontMatter(filePattern))
         .then((pagesMetadata) => {
             return mapFiles(filePattern, filePath => {
@@ -167,4 +152,9 @@ function build(filePattern, destinationPath, globalData) {
         });
 }
 
-module.exports = build;
+module.exports = {
+    // export modules that have global configuration
+    handlebars: handlebars,
+    marked: marked,
+    build: build
+};
