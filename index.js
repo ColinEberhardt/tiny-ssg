@@ -10,6 +10,7 @@ const mkdirp = require('mkdirp');
 const Q = require('q');
 const memoize = require('memoizee');
 const yaml = require('js-yaml');
+const curry = require('curry');
 
 const handlebarsCompile = memoize(handlebars.compile);
 
@@ -21,6 +22,10 @@ marked.setOptions({
 
 function merge(...data) {
     return extend(true, {}, ...data);
+}
+
+function chainPromises(initial, promises) {
+    return promises.reduce(Q.when, Q(initial));
 }
 
 // writes a file, optionally creating any required folders.
@@ -52,6 +57,7 @@ function loadHandlebarsPartials() {
         const templateName = path.basename(file, '.hbs');
         const template = fs.readFileSync(file, 'utf8');
         handlebars.registerPartial(templateName, template);
+        return {};
     });
 }
 
@@ -79,7 +85,7 @@ function renderLayout(postMatter, layoutName) {
 
 
 // create a page variable that contains filepath information'
-function addPageMetadata(postMatter, filePath) {
+const addPageMetadata = curry(function addPageMetadata(filePath, postMatter) {
     // '/foo/bar/baz/asdf/quux.md'
     const page = {
         path: filePath, // '/foo/bar/baz/asdf/quux.md'
@@ -89,7 +95,7 @@ function addPageMetadata(postMatter, filePath) {
         destination: path.join('/', filePath.substring(0, filePath.length - path.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
     };
     return merge(postMatter, { data: {page} });
-}
+})
 
 // renders the template in the 'content' property with the 'data' into a 'rendered' property
 function renderTemplate(postMatter) {
@@ -109,21 +115,21 @@ function applyLayout(postMatter) {
     return merge(postMatter, { rendered });
 }
 
-function writePost(postMatter, destinationPath) {
+const writePost = curry(function writePost(destinationPath, postMatter) {
     const dest = path.join(destinationPath, postMatter.data.page.destination);
     console.log('writing file', dest);
     return writeFile(dest, postMatter.rendered);
-}
+});
 
-function addGlobalData(postMatter, globalData) {
+const addGlobalData = curry(function addGlobalData(globalData, postMatter) {
     return merge(postMatter, { data: globalData});
-}
+});
 
-function collectPagesFrontMatter(filePattern, globalData) {
+const collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePattern, globalData) {
     return mapFiles(filePattern, filePath => {
         return readFile(filePath)
             .then(file => matter(file))
-            .then(postMatter => addPageMetadata(postMatter, filePath))
+            .then(postMatter => addPageMetadata(filePath, postMatter))
             .then(postMatter => {
                 return {
                     page: postMatter.page,
@@ -131,7 +137,7 @@ function collectPagesFrontMatter(filePattern, globalData) {
                 };
             });
     }).then(pages => merge(globalData, { pages }));
-}
+});
 
 function loadGlobalData(filePattern, globalData) {
     return readFiles(filePattern, (file, filePath) => {
@@ -142,18 +148,20 @@ function loadGlobalData(filePattern, globalData) {
 }
 
 function build(filePattern, destinationPath, globalPattern) {
-    return loadHandlebarsPartials()
-        .then(() => loadGlobalData(globalPattern, {}))
-        .then((globalData) => collectPagesFrontMatter(filePattern, globalData))
+    return chainPromises(loadHandlebarsPartials(), [
+            loadGlobalData(globalPattern),
+            collectPagesFrontMatter(filePattern)
+        ])
         .then((globalData) => {
             return readFiles(filePattern, (file, filePath) => {
-                return Q.fcall(() => matter(file))
-                    .then(postMatter => addGlobalData(postMatter, globalData))
-                    .then(postMatter => addPageMetadata(postMatter, filePath))
-                    .then(postMatter => renderTemplate(postMatter))
-                    .then(postMatter => renderMarkdown(postMatter))
-                    .then(postMatter => renderLayout(postMatter))
-                    .then(postMatter => writePost(postMatter, destinationPath));
+                return chainPromises(matter(file), [
+                    addGlobalData(globalData),
+                    addPageMetadata(filePath),
+                    renderTemplate,
+                    renderMarkdown,
+                    renderLayout,
+                    writePost(destinationPath)
+                ]);
             });
         });
 }
