@@ -1,16 +1,20 @@
-const globby = require('globby');
 const process = require('process');
 const matter = require('gray-matter');
 const marked = require('marked');
 const handlebars = require('handlebars');
 const path = require('path');
 const fs = require('fs-extra');
-const extend = require('node.extend');
-const mkdirp = require('mkdirp');
 const Q = require('q');
 const memoize = require('memoizee');
 const yaml = require('js-yaml');
 const curry = require('curry');
+
+const util = require('./util');
+const merge = util.merge, chainPromises = util.chainPromises, writeFile = util.writeFile,
+    readFile = util.readFile, mapFilePaths = util.mapFilePaths, mapFiles = util.mapFiles;
+// const {
+//     merge, chainPromises, writeFile, readFile, mapFilePaths, mapFiles
+// } = require('util');
 
 const handlebarsCompile = memoize(handlebars.compile);
 
@@ -20,40 +24,8 @@ marked.setOptions({
     }
 });
 
-function merge(...data) {
-    return extend(true, {}, ...data);
-}
-
-function chainPromises(initial, promises) {
-    return promises.reduce(Q.when, Q(initial));
-}
-
-// writes a file, optionally creating any required folders.
-function writeFile(filepath, contents) {
-    return Q.nfcall(mkdirp, path.dirname(filepath))
-        .then(Q.nfcall(fs.writeFile, filepath, contents));
-}
-
-function readFile(filepath) {
-    return Q.nfcall(fs.readFile, filepath, 'utf8');
-}
-
-// applies the given mapping for all filepaths that matches the given patterns
-function mapFiles(filePattern, mapping) {
-    return globby(filePattern).then(files => {
-        return Q.all(files.map(mapping));
-    });
-}
-
-// applies the given mapping tothe contents of all the files that match the given pattern
-function readFiles(filePattern, mapping) {
-    return mapFiles(filePattern, filePath => {
-        return readFile(filePath).then(file => mapping(file, filePath));
-    });
-}
-
 function loadHandlebarsPartials() {
-    return mapFiles('_includes/*.hbs', file => {
+    return mapFilePaths('_includes/*.hbs', file => {
         const templateName = path.basename(file, '.hbs');
         const template = fs.readFileSync(file, 'utf8');
         handlebars.registerPartial(templateName, template);
@@ -82,8 +54,6 @@ function renderLayout(postMatter, layoutName) {
         });
 }
 
-
-
 // create a page variable that contains filepath information'
 const addPageMetadata = curry(function addPageMetadata(filePath, postMatter) {
     // '/foo/bar/baz/asdf/quux.md'
@@ -95,7 +65,7 @@ const addPageMetadata = curry(function addPageMetadata(filePath, postMatter) {
         destination: path.join('/', filePath.substring(0, filePath.length - path.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
     };
     return merge(postMatter, { data: {page} });
-})
+});
 
 // renders the template in the 'content' property with the 'data' into a 'rendered' property
 function renderTemplate(postMatter) {
@@ -110,11 +80,6 @@ function renderMarkdown(postMatter) {
     return merge(postMatter, { rendered });
 }
 
-function applyLayout(postMatter) {
-    const rendered = renderWithLayoutSync(postMatter, postMatter.data.layout);
-    return merge(postMatter, { rendered });
-}
-
 const writePost = curry(function writePost(destinationPath, postMatter) {
     const dest = path.join(destinationPath, postMatter.data.page.destination);
     console.log('writing file', dest);
@@ -126,7 +91,7 @@ const addGlobalData = curry(function addGlobalData(globalData, postMatter) {
 });
 
 const collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePattern, globalData) {
-    return mapFiles(filePattern, filePath => {
+    return mapFilePaths(filePattern, filePath => {
         return readFile(filePath)
             .then(file => matter(file))
             .then(postMatter => addPageMetadata(filePath, postMatter))
@@ -140,7 +105,7 @@ const collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePatte
 });
 
 function loadGlobalData(filePattern, globalData) {
-    return readFiles(filePattern, (file, filePath) => {
+    return mapFiles(filePattern, (file, filePath) => {
         return {
             [path.basename(filePath, path.extname(filePath))]: yaml.safeLoad(file)
         };
@@ -149,26 +114,26 @@ function loadGlobalData(filePattern, globalData) {
 
 function build(filePattern, destinationPath, globalPattern) {
     return chainPromises(loadHandlebarsPartials(), [
-            loadGlobalData(globalPattern),
-            collectPagesFrontMatter(filePattern)
-        ])
-        .then((globalData) => {
-            return readFiles(filePattern, (file, filePath) => {
-                return chainPromises(matter(file), [
-                    addGlobalData(globalData),
-                    addPageMetadata(filePath),
-                    renderTemplate,
-                    renderMarkdown,
-                    renderLayout,
-                    writePost(destinationPath)
-                ]);
-            });
+        loadGlobalData(globalPattern),
+        collectPagesFrontMatter(filePattern)
+    ])
+    .then((globalData) => {
+        return mapFiles(filePattern, (file, filePath) => {
+            return chainPromises(matter(file), [
+                addGlobalData(globalData),
+                addPageMetadata(filePath),
+                renderTemplate,
+                renderMarkdown,
+                renderLayout,
+                writePost(destinationPath)
+            ]);
         });
+    });
 }
 
 module.exports = {
     // export modules that have global configuration
-    handlebars: handlebars,
-    marked: marked,
-    build: build
+    handlebars,
+    marked,
+    build
 };

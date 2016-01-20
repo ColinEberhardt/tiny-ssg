@@ -8,7 +8,8 @@
       "templateStrings": true,
       "objectLiteralComputedProperties": true,
       "objectLiteralShorthandProperties": true,
-      "spread": true
+      "spread": true,
+      "restParams": true
     },
     "rules": {
         "comma-dangle": 2,
@@ -118,7 +119,7 @@
         "indent": 2,
         "key-spacing": 2,
         "linebreak-style": 0,
-        "new-cap": 2,
+        "new-cap": 0,
         "new-parens": 2,
         "newline-after-var": 0,
         "no-array-constructor": 2,
