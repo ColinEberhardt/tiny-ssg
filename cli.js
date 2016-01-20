@@ -1,5 +1,5 @@
 const tinySSG = require('.');
 
-tinySSG('*.md', '_site', {})
+tinySSG.build('*.md', '_site', '_data/*.yml')
     .then(() => console.log('done'))
     .catch((e) => console.error(e));

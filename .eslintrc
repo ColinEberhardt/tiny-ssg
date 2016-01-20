@@ -5,7 +5,10 @@
     "ecmaFeatures": {
       "arrowFunctions": true,
       "blockBindings": true,
-      "templateStrings": true
+      "templateStrings": true,
+      "objectLiteralComputedProperties": true,
+      "objectLiteralShorthandProperties": true,
+      "spread": true
     },
     "rules": {
         "comma-dangle": 2,
