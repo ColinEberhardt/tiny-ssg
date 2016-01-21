@@ -39,6 +39,19 @@ const renderLayout = curry(
     }
 );
 
+function resolveExternals(postMatter) {
+    const externals = postMatter.data.externals || [];
+
+    const resolve = Object.keys(externals)
+      .map(key => {
+          const file = postMatter.data.page.dirname + '/' + externals[key];
+          return readFile(file)
+            .then(fileData => postMatter.data[key] = fileData);
+      });
+
+    return Q.all(resolve)
+        .then(() => postMatter);
+}
 
 function renderNamedLayout(postMatter, layoutName) {
     const layoutFile = `_layouts/${layoutName}.hbs`;
@@ -146,6 +159,7 @@ function build(config) {
             return chainPromises(matter(file), [
                 mergeGlobalData(globalData),
                 addPageMetadata(filePath),
+                resolveExternals,
                 renderTemplate,
                 renderMarkdown,
                 renderLayout(),
