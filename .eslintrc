@@ -9,7 +9,8 @@
       "objectLiteralComputedProperties": true,
       "objectLiteralShorthandProperties": true,
       "spread": true,
-      "restParams": true
+      "restParams": true,
+      "destructuring": true
     },
     "rules": {
         "comma-dangle": 2,

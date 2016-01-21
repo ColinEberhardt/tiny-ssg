@@ -8,12 +8,9 @@ const Q = require('q');
 const memoize = require('memoizee');
 const yaml = require('js-yaml');
 const curry = require('curry');
-
-const util = require('./util');
-
-//TODO: destructuring!
-const merge = util.merge, chainPromises = util.chainPromises, writeFile = util.writeFile,
-    readFile = util.readFile, mapFilePaths = util.mapFilePaths, mapFiles = util.mapFiles;
+const {
+    merge, chainPromises, writeFile, readFile, mapFilePaths, mapFiles
+} = require('./util');
 
 const handlebarsCompile = memoize(handlebars.compile);
 
