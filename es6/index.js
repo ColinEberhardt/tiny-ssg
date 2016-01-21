@@ -20,15 +20,15 @@ marked.setOptions({
     }
 });
 
-function loadHandlebarsPartials(includesFolder) {
-    return mapFilePaths(`${includesFolder}/*.hbs`, file => {
-        const templateName = path.basename(file, '.hbs');
-        const template = fs.readFileSync(file, 'utf8');
-        handlebars.registerPartial(templateName, template);
-        return {};
-    });
-}
-
+const loadHandlebarsPartials = curry(
+    function loadHandlebarsPartials(includesFolder, globalData) {
+        return mapFilePaths(`${includesFolder}/*.hbs`, file => {
+            const templateName = path.basename(file, '.hbs');
+            const template = fs.readFileSync(file, 'utf8');
+            handlebars.registerPartial(templateName, template);
+        }).then(() => globalData);
+    }
+);
 
 const renderLayout = curry(
     function renderLayout(postMatter) {
@@ -111,18 +111,20 @@ const mergeGlobalData = curry(
     }
 );
 
+function markCurrentPage(postMatter) {
+    //TODO: This mutates!
+    postMatter.data.pages.find(p => p.data.page.path === postMatter.data.page.path).isCurrentPage = true;
+    return postMatter;
+}
+
 const collectPagesFrontMatter = curry(
     function collectPagesFrontMatter(filePattern, globalData) {
         return mapFilePaths(filePattern, filePath => {
             return readFile(filePath)
                 .then(file => matter(file))
                 .then(postMatter => addPageMetadata(filePath, postMatter))
-                .then(postMatter => {
-                    return {
-                        page: postMatter.page,
-                        data: postMatter.data
-                    };
-                });
+                // filter out everything other than the data property
+                .then(postMatter => { return { data: postMatter.data }; });
         }).then(pages => merge(globalData, { pages }));
     }
 );
@@ -141,13 +143,15 @@ const defaultConfig = {
     includesFolder: '_includes',
     globalPattern: [],
     filePattern: ['**/*.md'],
-    destinationFolder: '_site'
+    destinationFolder: '_site',
+    globalData: {}
 };
 
 function build(config) {
     config = merge(defaultConfig, config || {});
 
-    return chainPromises(loadHandlebarsPartials(config.includesFolder), [
+    return chainPromises(config.globalData, [
+        loadHandlebarsPartials(config.includesFolder),
         loadGlobalData(config.globalPattern),
         collectPagesFrontMatter(config.filePattern)
     ])
@@ -156,6 +160,7 @@ function build(config) {
             return chainPromises(matter(file), [
                 mergeGlobalData(globalData),
                 addPageMetadata(filePath),
+                markCurrentPage,
                 resolveExternals,
                 renderTemplate,
                 renderMarkdown,

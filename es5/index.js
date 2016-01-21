@@ -28,14 +28,15 @@ marked.setOptions({
     }
 });
 
-function loadHandlebarsPartials(includesFolder) {
+var loadHandlebarsPartials = curry(function loadHandlebarsPartials(includesFolder, globalData) {
     return mapFilePaths(includesFolder + '/*.hbs', function (file) {
         var templateName = path.basename(file, '.hbs');
         var template = fs.readFileSync(file, 'utf8');
         handlebars.registerPartial(templateName, template);
-        return {};
+    }).then(function () {
+        return globalData;
     });
-}
+});
 
 var renderLayout = curry(function renderLayout(postMatter) {
     return renderNamedLayout(postMatter, postMatter.data.layout);
@@ -111,17 +112,24 @@ var mergeGlobalData = curry(function mergeGlobalData(globalData, postMatter) {
     return merge(postMatter, { data: globalData });
 });
 
+function markCurrentPage(postMatter) {
+    //TODO: This mutates!
+    postMatter.data.pages.find(function (p) {
+        return p.data.page.path === postMatter.data.page.path;
+    }).isCurrentPage = true;
+    return postMatter;
+}
+
 var collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePattern, globalData) {
     return mapFilePaths(filePattern, function (filePath) {
         return readFile(filePath).then(function (file) {
             return matter(file);
         }).then(function (postMatter) {
             return addPageMetadata(filePath, postMatter);
-        }).then(function (postMatter) {
-            return {
-                page: postMatter.page,
-                data: postMatter.data
-            };
+        })
+        // filter out everything other than the data property
+        .then(function (postMatter) {
+            return { data: postMatter.data };
         });
     }).then(function (pages) {
         return merge(globalData, { pages: pages });
@@ -142,15 +150,16 @@ var defaultConfig = {
     includesFolder: '_includes',
     globalPattern: [],
     filePattern: ['**/*.md'],
-    destinationFolder: '_site'
+    destinationFolder: '_site',
+    globalData: {}
 };
 
 function build(config) {
     config = merge(defaultConfig, config || {});
 
-    return chainPromises(loadHandlebarsPartials(config.includesFolder), [loadGlobalData(config.globalPattern), collectPagesFrontMatter(config.filePattern)]).then(function (globalData) {
+    return chainPromises(config.globalData, [loadHandlebarsPartials(config.includesFolder), loadGlobalData(config.globalPattern), collectPagesFrontMatter(config.filePattern)]).then(function (globalData) {
         return mapFiles(config.filePattern, function (file, filePath) {
-            return chainPromises(matter(file), [mergeGlobalData(globalData), addPageMetadata(filePath), resolveExternals, renderTemplate, renderMarkdown, renderLayout(), writePost(config.destinationFolder)]);
+            return chainPromises(matter(file), [mergeGlobalData(globalData), addPageMetadata(filePath), markCurrentPage, resolveExternals, renderTemplate, renderMarkdown, renderLayout(), writePost(config.destinationFolder)]);
         });
     });
 }

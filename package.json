@@ -2,7 +2,7 @@
   "name": "tiny-ssg",
   "version": "0.0.2",
   "description": "",
-  "main": "index.js",
+  "main": "es5/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
