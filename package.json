@@ -1,6 +1,6 @@
 {
   "name": "tiny-ssg",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "es5/index.js",
   "scripts": {
