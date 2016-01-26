@@ -1,49 +1,75 @@
 'use strict';
 
-var process = require('process');
-var matter = require('gray-matter');
-var marked = require('marked');
-var handlebars = require('handlebars');
-var path = require('path');
-var fs = require('fs-extra');
-var Q = require('q');
-var memoize = require('memoizee');
-var yaml = require('js-yaml');
-var curry = require('curry');
+var _process = require('process');
 
-var _require = require('./util');
+var _process2 = _interopRequireDefault(_process);
 
-var merge = _require.merge;
-var chainPromises = _require.chainPromises;
-var writeFile = _require.writeFile;
-var readFile = _require.readFile;
-var mapFilePaths = _require.mapFilePaths;
-var mapFiles = _require.mapFiles;
+var _grayMatter = require('gray-matter');
 
-var handlebarsCompile = memoize(handlebars.compile);
+var _grayMatter2 = _interopRequireDefault(_grayMatter);
 
-marked.setOptions({
+var _marked = require('marked');
+
+var _marked2 = _interopRequireDefault(_marked);
+
+var _handlebars = require('handlebars');
+
+var _handlebars2 = _interopRequireDefault(_handlebars);
+
+var _path = require('path');
+
+var _path2 = _interopRequireDefault(_path);
+
+var _fsExtra = require('fs-extra');
+
+var _fsExtra2 = _interopRequireDefault(_fsExtra);
+
+var _q = require('q');
+
+var _q2 = _interopRequireDefault(_q);
+
+var _memoizee = require('memoizee');
+
+var _memoizee2 = _interopRequireDefault(_memoizee);
+
+var _jsYaml = require('js-yaml');
+
+var _jsYaml2 = _interopRequireDefault(_jsYaml);
+
+var _curry = require('curry');
+
+var _curry2 = _interopRequireDefault(_curry);
+
+var _util = require('./util');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var handlebarsCompile = (0, _memoizee2.default)(
+// export modules that have global configuration
+_handlebars2.default.compile);
+
+_marked2.default.setOptions({
     highlight: function highlight(code) {
         return require('highlight.js').highlightAuto(code).value;
     }
 });
 
 function renderIfMarkdown(extname, contents) {
-    return extname === '.md' ? marked(contents) : contents;
+    return extname === '.md' ? (0, _marked2.default)(contents) : contents;
 }
 
-var loadHandlebarsPartials = curry(function loadHandlebarsPartials(includesPattern, globalData) {
-    return mapFilePaths(includesPattern, function (file) {
-        var extname = path.extname(file);
-        var templateName = path.basename(file, extname);
-        var template = fs.readFileSync(file, 'utf8');
-        handlebars.registerPartial(templateName, renderIfMarkdown(extname, template));
+var loadHandlebarsPartials = (0, _curry2.default)(function loadHandlebarsPartials(includesPattern, globalData) {
+    return (0, _util.mapFilePaths)(includesPattern, function (file) {
+        var extname = _path2.default.extname(file);
+        var templateName = _path2.default.basename(file, extname);
+        var template = _fsExtra2.default.readFileSync(file, 'utf8');
+        _handlebars2.default.registerPartial(templateName, renderIfMarkdown(extname, template));
     }).then(function () {
         return globalData;
     });
 });
 
-var renderLayout = curry(function renderLayout(postMatter) {
+var renderLayout = (0, _curry2.default)(function renderLayout(postMatter) {
     return renderNamedLayout(postMatter, postMatter.data.layout);
 });
 
@@ -52,27 +78,27 @@ function resolveExternals(postMatter) {
 
     var resolve = Object.keys(externals).map(function (key) {
         var file = postMatter.data.page.dirname + '/' + externals[key];
-        return readFile(file).then(function (fileData) {
+        return (0, _util.readFile)(file).then(function (fileData) {
             return postMatter.data[key] = fileData;
         });
     });
 
-    return Q.all(resolve).then(function () {
+    return _q2.default.all(resolve).then(function () {
         return postMatter;
     });
 }
 
 function renderNamedLayout(postMatter, layoutName) {
     var layoutFile = '_layouts/' + layoutName + '.hbs';
-    return readFile(layoutFile).then(function (file) {
-        return matter(file);
+    return (0, _util.readFile)(layoutFile).then(function (file) {
+        return (0, _grayMatter2.default)(file);
     }).then(function (layoutMatter) {
         var layoutTemplate = handlebarsCompile(layoutMatter.content);
         // merge the data from the page and the layout - and add a special 'body' property
         // for the transclusion
-        var mergedData = merge(layoutMatter.data, postMatter.data, { body: postMatter.rendered });
+        var mergedData = (0, _util.merge)(layoutMatter.data, postMatter.data, { body: postMatter.rendered });
         var rendered = layoutTemplate(mergedData);
-        var newMatter = merge(postMatter, { rendered: rendered });
+        var newMatter = (0, _util.merge)(postMatter, { rendered: rendered });
         if (layoutMatter.data.layout) {
             return renderNamedLayout(newMatter, layoutMatter.data.layout);
         } else {
@@ -82,43 +108,43 @@ function renderNamedLayout(postMatter, layoutName) {
 }
 
 // create a page variable that contains filepath information'
-var addPageMetadata = curry(function addPageMetadata(filePath, postMatter) {
+var addPageMetadata = (0, _curry2.default)(function addPageMetadata(filePath, postMatter) {
     // '/foo/bar/baz/asdf/quux.md'
     var page = {
         path: filePath, // '/foo/bar/baz/asdf/quux.md'
-        basename: path.basename(filePath, path.extname(filePath)), // 'quux'
-        dirname: path.dirname(filePath), // '/foo/bar/baz/asdf'
-        ext: path.extname(filePath), // '.md'
-        destination: path.join('/', filePath.substring(0, filePath.length - path.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
+        basename: _path2.default.basename(filePath, _path2.default.extname(filePath)), // 'quux'
+        dirname: _path2.default.dirname(filePath), // '/foo/bar/baz/asdf'
+        ext: _path2.default.extname(filePath), // '.md'
+        destination: _path2.default.join('/', filePath.substring(0, filePath.length - _path2.default.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
     };
-    return merge(postMatter, { data: { page: page } });
+    return (0, _util.merge)(postMatter, { data: { page: page } });
 });
 
 // renders the template in the 'content' property with the 'data' into a 'rendered' property
 function renderTemplate(postMatter) {
     var compiledTemplate = handlebarsCompile(postMatter.content);
     var templatedPost = compiledTemplate(postMatter.data);
-    return merge(postMatter, { rendered: templatedPost });
+    return (0, _util.merge)(postMatter, { rendered: templatedPost });
 }
 
 // if the file has a '.md' extensions, the 'rendered' property is markdown rendered
 function renderMarkdown(postMatter) {
     var rendered = renderIfMarkdown(postMatter.data.page.ext, postMatter.rendered);
-    return merge(postMatter, { rendered: rendered });
+    return (0, _util.merge)(postMatter, { rendered: rendered });
 }
 
-var writePost = curry(function writePost(destinationFolder, postMatter) {
-    var dest = path.join(destinationFolder, postMatter.data.page.destination);
+var writePost = (0, _curry2.default)(function writePost(destinationFolder, postMatter) {
+    var dest = _path2.default.join(destinationFolder, postMatter.data.page.destination);
     console.log('writing file', dest);
-    return writeFile(dest, postMatter.rendered);
+    return (0, _util.writeFile)(dest, postMatter.rendered);
 });
 
-var mergeGlobalData = curry(function mergeGlobalData(globalData, postMatter) {
-    return merge(postMatter, { data: globalData });
+var mergeGlobalData = (0, _curry2.default)(function mergeGlobalData(globalData, postMatter) {
+    return (0, _util.merge)(postMatter, { data: globalData });
 });
 
-var addGlobalData = curry(function addGlobalData(globalData, current) {
-    return merge(current, globalData);
+var addGlobalData = (0, _curry2.default)(function addGlobalData(globalData, current) {
+    return (0, _util.merge)(current, globalData);
 });
 
 function markCurrentPage(postMatter) {
@@ -129,10 +155,10 @@ function markCurrentPage(postMatter) {
     return postMatter;
 }
 
-var collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePattern, globalData) {
-    return mapFilePaths(filePattern, function (filePath) {
-        return readFile(filePath).then(function (file) {
-            return matter(file);
+var collectPagesFrontMatter = (0, _curry2.default)(function collectPagesFrontMatter(filePattern, globalData) {
+    return (0, _util.mapFilePaths)(filePattern, function (filePath) {
+        return (0, _util.readFile)(filePath).then(function (file) {
+            return (0, _grayMatter2.default)(file);
         }).then(function (postMatter) {
             return addPageMetadata(filePath, postMatter);
         })
@@ -141,17 +167,17 @@ var collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePattern
             return postMatter.data;
         });
     }).then(function (pages) {
-        return merge(globalData, { pages: pages });
+        return (0, _util.merge)(globalData, { pages: pages });
     });
 });
 
-var loadGlobalData = curry(function loadGlobalData(filePattern, globalData) {
-    return mapFiles(filePattern, function (file, filePath) {
+var loadGlobalData = (0, _curry2.default)(function loadGlobalData(filePattern, globalData) {
+    return (0, _util.mapFiles)(filePattern, function (file, filePath) {
         var _ref;
 
-        return _ref = {}, _ref[path.basename(filePath, path.extname(filePath))] = yaml.safeLoad(file), _ref;
+        return _ref = {}, _ref[_path2.default.basename(filePath, _path2.default.extname(filePath))] = _jsYaml2.default.safeLoad(file), _ref;
     }).then(function (globals) {
-        return merge.apply(undefined, [globalData].concat(globals));
+        return _util.merge.apply(undefined, [globalData].concat(globals));
     });
 });
 
@@ -164,25 +190,23 @@ var defaultConfig = {
 };
 
 function build(config) {
-    config = merge(defaultConfig, config || {});
+    config = (0, _util.merge)(defaultConfig, config || {});
 
-    var workingDirectory = process.cwd();
+    var workingDirectory = _process2.default.cwd();
     if (config.sourceFolder) {
-        process.chdir(config.sourceFolder);
+        _process2.default.chdir(config.sourceFolder);
     }
 
-    return chainPromises({}, [loadHandlebarsPartials(config.includesPattern), loadGlobalData(config.globalPattern), collectPagesFrontMatter(config.filePattern), addGlobalData(config.globalData)]).then(function (globalData) {
-        return mapFiles(config.filePattern, function (file, filePath) {
-            return chainPromises(matter(file), [mergeGlobalData(globalData), addPageMetadata(filePath), markCurrentPage, resolveExternals, renderTemplate, renderMarkdown, renderLayout(), writePost(config.destinationFolder)]);
+    return (0, _util.chainPromises)({}, [loadHandlebarsPartials(config.includesPattern), loadGlobalData(config.globalPattern), collectPagesFrontMatter(config.filePattern), addGlobalData(config.globalData)]).then(function (globalData) {
+        return (0, _util.mapFiles)(config.filePattern, function (file, filePath) {
+            return (0, _util.chainPromises)((0, _grayMatter2.default)(file), [mergeGlobalData(globalData), addPageMetadata(filePath), markCurrentPage, resolveExternals, renderTemplate, renderMarkdown, renderLayout(), writePost(config.destinationFolder)]);
         });
     }).then(function () {
-        return process.chdir(workingDirectory);
+        return _process2.default.chdir(workingDirectory);
     });
 }
 
-module.exports = {
-    // export modules that have global configuration
-    handlebars: handlebars,
-    marked: marked,
+module.exports = { handlebars: _handlebars2.default,
+    marked: _marked2.default,
     build: build
 };

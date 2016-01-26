@@ -1,16 +1,14 @@
-const process = require('process');
-const matter = require('gray-matter');
-const marked = require('marked');
-const handlebars = require('handlebars');
-const path = require('path');
-const fs = require('fs-extra');
-const Q = require('q');
-const memoize = require('memoizee');
-const yaml = require('js-yaml');
-const curry = require('curry');
-const {
-    merge, chainPromises, writeFile, readFile, mapFilePaths, mapFiles
-} = require('./util');
+import process from 'process';
+import matter from 'gray-matter';
+import marked from 'marked';
+import handlebars from 'handlebars';
+import path from 'path';
+import fs from 'fs-extra';
+import Q from 'q';
+import memoize from 'memoizee';
+import yaml from 'js-yaml';
+import curry from 'curry';
+import { merge, chainPromises, writeFile, readFile, mapFilePaths, mapFiles } from './util';
 
 const handlebarsCompile = memoize(handlebars.compile);
 

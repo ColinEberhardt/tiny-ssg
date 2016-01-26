@@ -10,7 +10,8 @@
       "objectLiteralShorthandProperties": true,
       "spread": true,
       "restParams": true,
-      "destructuring": true
+      "destructuring": true,
+      "modules": true
     },
     "rules": {
         "comma-dangle": 2,
