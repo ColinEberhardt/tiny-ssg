@@ -4,11 +4,15 @@
   "description": "",
   "main": "es5/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node bin/tiny-ssg -s test *.md"
+  },
+  "bin": {
+    "tiny-ssg": "./bin/tiny-ssg"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "commander": "^2.9.0",
     "curry": "^1.2.0",
     "fs-extra": "^0.26.4",
     "globby": "^4.0.0",

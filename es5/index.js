@@ -28,11 +28,16 @@ marked.setOptions({
     }
 });
 
-var loadHandlebarsPartials = curry(function loadHandlebarsPartials(includesFolder, globalData) {
-    return mapFilePaths(includesFolder + '/*.hbs', function (file) {
-        var templateName = path.basename(file, '.hbs');
+function renderIfMarkdown(extname, contents) {
+    return extname === '.md' ? marked(contents) : contents;
+}
+
+var loadHandlebarsPartials = curry(function loadHandlebarsPartials(includesPattern, globalData) {
+    return mapFilePaths(includesPattern, function (file) {
+        var extname = path.extname(file);
+        var templateName = path.basename(file, extname);
         var template = fs.readFileSync(file, 'utf8');
-        handlebars.registerPartial(templateName, template);
+        handlebars.registerPartial(templateName, renderIfMarkdown(extname, template));
     }).then(function () {
         return globalData;
     });
@@ -98,7 +103,7 @@ function renderTemplate(postMatter) {
 
 // if the file has a '.md' extensions, the 'rendered' property is markdown rendered
 function renderMarkdown(postMatter) {
-    var rendered = postMatter.data.page.ext === '.md' ? marked(postMatter.rendered) : postMatter.rendered;
+    var rendered = renderIfMarkdown(postMatter.data.page.ext, postMatter.rendered);
     return merge(postMatter, { rendered: rendered });
 }
 
@@ -112,10 +117,14 @@ var mergeGlobalData = curry(function mergeGlobalData(globalData, postMatter) {
     return merge(postMatter, { data: globalData });
 });
 
+var addGlobalData = curry(function addGlobalData(globalData, current) {
+    return merge(current, globalData);
+});
+
 function markCurrentPage(postMatter) {
     //TODO: This mutates!
     postMatter.data.pages.find(function (p) {
-        return p.data.page.path === postMatter.data.page.path;
+        return p.page.path === postMatter.data.page.path;
     }).isCurrentPage = true;
     return postMatter;
 }
@@ -129,7 +138,7 @@ var collectPagesFrontMatter = curry(function collectPagesFrontMatter(filePattern
         })
         // filter out everything other than the data property
         .then(function (postMatter) {
-            return { data: postMatter.data };
+            return postMatter.data;
         });
     }).then(function (pages) {
         return merge(globalData, { pages: pages });
@@ -147,7 +156,7 @@ var loadGlobalData = curry(function loadGlobalData(filePattern, globalData) {
 });
 
 var defaultConfig = {
-    includesFolder: '_includes',
+    includesPattern: ['_includes/*.*'],
     globalPattern: [],
     filePattern: ['**/*.md'],
     destinationFolder: '_site',
@@ -157,10 +166,17 @@ var defaultConfig = {
 function build(config) {
     config = merge(defaultConfig, config || {});
 
-    return chainPromises(config.globalData, [loadHandlebarsPartials(config.includesFolder), loadGlobalData(config.globalPattern), collectPagesFrontMatter(config.filePattern)]).then(function (globalData) {
+    var workingDirectory = process.cwd();
+    if (config.sourceFolder) {
+        process.chdir(config.sourceFolder);
+    }
+
+    return chainPromises({}, [loadHandlebarsPartials(config.includesPattern), loadGlobalData(config.globalPattern), collectPagesFrontMatter(config.filePattern), addGlobalData(config.globalData)]).then(function (globalData) {
         return mapFiles(config.filePattern, function (file, filePath) {
             return chainPromises(matter(file), [mergeGlobalData(globalData), addPageMetadata(filePath), markCurrentPage, resolveExternals, renderTemplate, renderMarkdown, renderLayout(), writePost(config.destinationFolder)]);
         });
+    }).then(function () {
+        return process.chdir(workingDirectory);
     });
 }
 

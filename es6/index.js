@@ -20,12 +20,17 @@ marked.setOptions({
     }
 });
 
+function renderIfMarkdown(extname, contents) {
+    return extname === '.md' ? marked(contents) : contents;
+}
+
 const loadHandlebarsPartials = curry(
-    function loadHandlebarsPartials(includesFolder, globalData) {
-        return mapFilePaths(`${includesFolder}/*.hbs`, file => {
-            const templateName = path.basename(file, '.hbs');
+    function loadHandlebarsPartials(includesPattern, globalData) {
+        return mapFilePaths(includesPattern, file => {
+            const extname = path.extname(file);
+            const templateName = path.basename(file, extname);
             const template = fs.readFileSync(file, 'utf8');
-            handlebars.registerPartial(templateName, template);
+            handlebars.registerPartial(templateName, renderIfMarkdown(extname, template));
         }).then(() => globalData);
     }
 );
@@ -93,7 +98,7 @@ function renderTemplate(postMatter) {
 
 // if the file has a '.md' extensions, the 'rendered' property is markdown rendered
 function renderMarkdown(postMatter) {
-    const rendered = postMatter.data.page.ext === '.md' ? marked(postMatter.rendered) : postMatter.rendered;
+    const rendered = renderIfMarkdown(postMatter.data.page.ext, postMatter.rendered);
     return merge(postMatter, { rendered });
 }
 
@@ -111,9 +116,15 @@ const mergeGlobalData = curry(
     }
 );
 
+const addGlobalData = curry(
+    function addGlobalData(globalData, current) {
+        return merge(current, globalData);
+    }
+);
+
 function markCurrentPage(postMatter) {
     //TODO: This mutates!
-    postMatter.data.pages.find(p => p.data.page.path === postMatter.data.page.path).isCurrentPage = true;
+    postMatter.data.pages.find(p => p.page.path === postMatter.data.page.path).isCurrentPage = true;
     return postMatter;
 }
 
@@ -124,7 +135,7 @@ const collectPagesFrontMatter = curry(
                 .then(file => matter(file))
                 .then(postMatter => addPageMetadata(filePath, postMatter))
                 // filter out everything other than the data property
-                .then(postMatter => { return { data: postMatter.data }; });
+                .then(postMatter => postMatter.data);
         }).then(pages => merge(globalData, { pages }));
     }
 );
@@ -140,7 +151,7 @@ const loadGlobalData = curry(
 );
 
 const defaultConfig = {
-    includesFolder: '_includes',
+    includesPattern: ['_includes/*.*'],
     globalPattern: [],
     filePattern: ['**/*.md'],
     destinationFolder: '_site',
@@ -150,10 +161,16 @@ const defaultConfig = {
 function build(config) {
     config = merge(defaultConfig, config || {});
 
-    return chainPromises(config.globalData, [
-        loadHandlebarsPartials(config.includesFolder),
+    const workingDirectory = process.cwd();
+    if (config.sourceFolder) {
+        process.chdir(config.sourceFolder);
+    }
+
+    return chainPromises({}, [
+        loadHandlebarsPartials(config.includesPattern),
         loadGlobalData(config.globalPattern),
-        collectPagesFrontMatter(config.filePattern)
+        collectPagesFrontMatter(config.filePattern),
+        addGlobalData(config.globalData)
     ])
     .then((globalData) => {
         return mapFiles(config.filePattern, (file, filePath) => {
@@ -168,7 +185,8 @@ function build(config) {
                 writePost(config.destinationFolder)
             ]);
         });
-    });
+    })
+    .then(() => process.chdir(workingDirectory));
 }
 
 module.exports = {
