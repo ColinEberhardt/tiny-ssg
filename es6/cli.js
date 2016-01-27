@@ -1,17 +1,17 @@
 const tinySSG = require('.');
 const fs = require('fs');
 const path = require('path');
-var program = require('commander');
+const program = require('commander');
 
 const packageConfig = fs.readFileSync(path.join(__dirname, '../package.json'));
+import {defaultConfig} from './defaultConfig';
 
 program
     .version(JSON.parse(packageConfig).version)
     .usage('[options] <files ...>')
-    .option('-i, --includes-pattern [pattern]', 'File pattern for partials to be included')
-    .option('-g, --global-pattern [pattern]', 'File pattern global data')
-    .option('-s, --source-folder [folder]', 'Folder that contains the website source')
-    .option('-d, --destination-folder [folder]', 'Folder for the generated output')
+    .option('-i, --includes-pattern [pattern]', `File pattern for handlebars partials, defaults to '${defaultConfig.includesPattern}'`)
+    .option('-g, --global-pattern [pattern]', `File pattern for files that provide global data, default to '${defaultConfig.globalPattern}'`)
+    .option('-d, --destination-folder [folder]', `Folder for the generated output, defaults to '${defaultConfig.destinationFolder}'`)
     .parse(process.argv);
 
 function asArray(val) {
@@ -27,9 +27,6 @@ if (program.includesPattern) {
 }
 if (program.globalPattern) {
     config.globalPattern = asArray(program.globalPattern);
-}
-if (program.sourceFolder) {
-    config.sourceFolder = program.sourceFolder;
 }
 if (program.destinationFolder) {
     config.destinationFolder = program.destinationFolder;

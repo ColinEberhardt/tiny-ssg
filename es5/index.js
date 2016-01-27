@@ -21,18 +21,12 @@ var _filePipelineSteps = require('./filePipelineSteps');
 
 var _globalPipelineSteps = require('./globalPipelineSteps');
 
+var _defaultConfig = require('./defaultConfig');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var defaultConfig = {
-    includesPattern: ['_includes/*.*'],
-    globalPattern: [],
-    filePattern: ['**/*.md'],
-    destinationFolder: '_site',
-    globalData: {}
-};
-
 function build(config) {
-    config = (0, _util.merge)(defaultConfig, config || {});
+    config = (0, _util.merge)(_defaultConfig.defaultConfig, config || {});
 
     var workingDirectory = _process2.default.cwd();
     if (config.sourceFolder) {

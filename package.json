@@ -4,7 +4,7 @@
   "description": "",
   "main": "es5/index.js",
   "scripts": {
-    "test": "node bin/tiny-ssg -s test *.md"
+    "test": "cd test && node ../bin/tiny-ssg *.md && cd .."
   },
   "bin": {
     "tiny-ssg": "./bin/tiny-ssg"
