@@ -63,7 +63,7 @@ export function renderMarkdown(postMatter) {
 export const writePost = curry((destinationFolder, postMatter) => {
     const dest = path.join(destinationFolder, postMatter.data.page.destination);
     console.log('writing file', dest);
-    writeFile(dest, postMatter.rendered)
+    return writeFile(dest, postMatter.rendered)
       .then(() => postMatter);
 });
 

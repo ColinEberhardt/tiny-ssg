@@ -97,7 +97,7 @@ function renderMarkdown(postMatter) {
 var writePost = exports.writePost = (0, _curry2.default)(function (destinationFolder, postMatter) {
     var dest = _path2.default.join(destinationFolder, postMatter.data.page.destination);
     console.log('writing file', dest);
-    (0, _util.writeFile)(dest, postMatter.rendered).then(function () {
+    return (0, _util.writeFile)(dest, postMatter.rendered).then(function () {
         return postMatter;
     });
 });
