@@ -33,20 +33,6 @@ export function markCurrentPage(postMatter) {
     return postMatter;
 }
 
-export function resolveExternals(postMatter) {
-    const externals = postMatter.data.externals || [];
-
-    const resolve = Object.keys(externals)
-      .map(key => {
-          const file = postMatter.data.page.dirname + '/' + externals[key];
-          return readFile(file)
-            .then(fileData => postMatter.data[key] = fileData);
-      });
-
-    return Q.all(resolve)
-        .then(() => postMatter);
-}
-
 // renders the template in the 'content' property with the 'data' into a 'rendered' property
 export function renderTemplate(postMatter) {
     const compiledTemplate = handlebarsCompile(postMatter.content);

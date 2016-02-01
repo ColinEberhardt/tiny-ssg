@@ -3,7 +3,7 @@ import matter from 'gray-matter';
 import path from 'path';
 
 import { merge, chainPromises, writeFile, readFile, mapFilePaths, mapFiles } from './util';
-import { mergeGlobalData, addPageMetadata, markCurrentPage, resolveExternals, renderTemplate, renderMarkdown, renderLayout, writePost } from './filePipelineSteps';
+import { mergeGlobalData, addPageMetadata, markCurrentPage, renderTemplate, renderMarkdown, renderLayout, writePost } from './filePipelineSteps';
 import { loadGlobalData, collectPagesFrontMatter, addGlobalData, loadHandlebarsPartials } from './globalPipelineSteps';
 import { defaultConfig } from './defaultConfig';
 
@@ -27,7 +27,6 @@ export function build(config) {
                 mergeGlobalData(globalData),
                 addPageMetadata(filePath),
                 markCurrentPage,
-                resolveExternals,
                 renderTemplate,
                 renderMarkdown,
                 renderLayout,

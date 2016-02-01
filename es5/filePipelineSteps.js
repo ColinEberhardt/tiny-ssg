@@ -3,7 +3,6 @@
 exports.__esModule = true;
 exports.renderLayout = exports.writePost = exports.addPageMetadata = exports.mergeGlobalData = undefined;
 exports.markCurrentPage = markCurrentPage;
-exports.resolveExternals = resolveExternals;
 exports.renderTemplate = renderTemplate;
 exports.renderMarkdown = renderMarkdown;
 
@@ -64,21 +63,6 @@ function markCurrentPage(postMatter) {
         return p.page.path === postMatter.data.page.path;
     }).isCurrentPage = true;
     return postMatter;
-}
-
-function resolveExternals(postMatter) {
-    var externals = postMatter.data.externals || [];
-
-    var resolve = Object.keys(externals).map(function (key) {
-        var file = postMatter.data.page.dirname + '/' + externals[key];
-        return (0, _util.readFile)(file).then(function (fileData) {
-            return postMatter.data[key] = fileData;
-        });
-    });
-
-    return _q2.default.all(resolve).then(function () {
-        return postMatter;
-    });
 }
 
 // renders the template in the 'content' property with the 'data' into a 'rendered' property

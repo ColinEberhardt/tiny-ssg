@@ -35,7 +35,7 @@ function build(config) {
 
     return (0, _util.chainPromises)({}, [(0, _globalPipelineSteps.loadHandlebarsPartials)(config.includesPattern), (0, _globalPipelineSteps.loadGlobalData)(config.globalPattern), (0, _globalPipelineSteps.collectPagesFrontMatter)(config.filePattern), (0, _globalPipelineSteps.addGlobalData)(config.globalData)]).then(function (globalData) {
         return (0, _util.mapFiles)(config.filePattern, function (file, filePath) {
-            return (0, _util.chainPromises)((0, _grayMatter2.default)(file), [(0, _filePipelineSteps.mergeGlobalData)(globalData), (0, _filePipelineSteps.addPageMetadata)(filePath), _filePipelineSteps.markCurrentPage, _filePipelineSteps.resolveExternals, _filePipelineSteps.renderTemplate, _filePipelineSteps.renderMarkdown, _filePipelineSteps.renderLayout, (0, _filePipelineSteps.writePost)(config.destinationFolder)]);
+            return (0, _util.chainPromises)((0, _grayMatter2.default)(file), [(0, _filePipelineSteps.mergeGlobalData)(globalData), (0, _filePipelineSteps.addPageMetadata)(filePath), _filePipelineSteps.markCurrentPage, _filePipelineSteps.renderTemplate, _filePipelineSteps.renderMarkdown, _filePipelineSteps.renderLayout, (0, _filePipelineSteps.writePost)(config.destinationFolder)]);
         });
     }).then(function () {
         return _process2.default.chdir(workingDirectory);
