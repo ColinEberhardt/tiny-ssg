@@ -52,7 +52,7 @@ var addPageMetadata = exports.addPageMetadata = (0, _curry2.default)(function (f
         basename: _path2.default.basename(filePath, _path2.default.extname(filePath)), // 'quux'
         dirname: _path2.default.dirname(filePath), // '/foo/bar/baz/asdf'
         ext: _path2.default.extname(filePath), // '.md'
-        destination: _path2.default.join('/', filePath.substring(0, filePath.length - _path2.default.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
+        destination: _path2.default.posix.join('/', filePath.substring(0, filePath.length - _path2.default.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
     };
     return (0, _util.merge)(postMatter, { data: { page: page } });
 });
