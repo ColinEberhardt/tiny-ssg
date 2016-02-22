@@ -22,7 +22,7 @@ export const addPageMetadata = curry((filePath, postMatter) => {
         basename: path.basename(filePath, path.extname(filePath)), // 'quux'
         dirname: path.dirname(filePath),  // '/foo/bar/baz/asdf'
         ext: path.extname(filePath), // '.md'
-        destination: path.join('/', filePath.substring(0, filePath.length - path.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
+        destination: path.posix.join('/', filePath.substring(0, filePath.length - path.extname(filePath).length) + '.html') // '/foo/bar/baz/asdf/quux.html'
     };
     return merge(postMatter, { data: {page} });
 });
